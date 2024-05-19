@@ -1,58 +1,75 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# Для своего индивидуального задания лабораторной работы 2.23 необходимо организовать
-# конвейер, в котором сначала в отдельном потоке вычисляется значение первой функции,
-# после чего результаты вычисления должны передаваться второй функции, вычисляемой в
-# отдельном потоке. Потоки для вычисления значений двух функций должны запускаться
+# Для своего индивидуального задания лабораторной работы 2.23
+# необходимо организовать конвейер, в котором сначала в
+# отдельном потоке вычисляется значение первой функции,
+# после чего результаты вычисления должны передаваться
+# второй функции, вычисляемой в отдельном потоке.
+# Потоки для вычисления значений двух функций должны запускаться
 # одновременно.
 
+# Вариант 1 и 2
+
 import math
-from threading import Barrier, Thread
+from threading import Lock, Thread
 
 E = 10e-7
-results = [1]
-br = Barrier(4)
+lock_th = Lock()
 
 
-def calculate_sum(x):
-    return 3**x
+# 1 Вариант
+def calculate_row_1(target, x):
+    def calculate_nextpart(results, x, cur):
+        return results[-1] * x * math.log(3) / cur
 
+    def control_value(x):
+        return 3**x
 
-def calculate_part(results, x, cur):
+    i = 0
+
     local_result = [1]
+    while local_result[i] > E:
+        local_result.append(calculate_nextpart(local_result, x, i + 1))
+        i += 1
 
-    def my_log(local_result):
-        local_result[0] *= math.pow(math.log(3), cur)
-        br.wait()
+    with lock_th:
+        if control_value(x) == round(sum(local_result), 5):
+            target["sum_row_1"] = sum(local_result)
 
-    def my_pow(local_result):
-        local_result[0] *= x**cur
-        br.wait()
 
-    def my_fact(local_result):
-        local_result[0] /= math.factorial(cur)
-        br.wait()
+# 2 Вариант
+def calculate_row_2(target, x):
+    def calculate_nextpart(results, x):
+        return results[-1] * x
 
-    Thread(target=my_log, args=(local_result,)).start()
-    Thread(target=my_pow, args=(local_result,)).start()
-    Thread(target=my_fact, args=(local_result,)).start()
+    def control_value(x):
+        return round(1 / (1 - x), 4)
 
-    br.wait()
-    results.append(local_result[0])
+    i = 0
+    local_result = [1]
+    while local_result[i] > E:
+        local_result.append(calculate_nextpart(local_result, x))
+        i += 1
+
+    with lock_th:
+        if control_value(x) == round(sum(local_result), 4):
+            target["sum_row_2"] = sum(local_result)
 
 
 def main():
-    x = 3
-    i = 0
-    while results[i] > E:
-        calculate_part(results, x, i + 1)
-        i += 1
+    part_of_rows = {"sum_row_1": [1], "sum_row_2": [1]}
 
-    print(results)
-    print(f"x = {x}")
-    print(round(sum(results), 5))
-    print(round(sum(results), 5) == calculate_sum(x))
+    th1 = Thread(target=calculate_row_1, args=(part_of_rows, 1))
+    th2 = Thread(target=calculate_row_2, args=(part_of_rows, 0.7))
+
+    th1.start()
+    th2.start()
+
+    th1.join()
+    th2.join()
+
+    print(f"Результат {part_of_rows}")
 
 
 if __name__ == "__main__":
