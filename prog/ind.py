@@ -15,6 +15,7 @@ import math
 from threading import Lock, Thread
 
 E = 10e-7
+
 lock_obj = Lock()
 
 
@@ -22,9 +23,6 @@ lock_obj = Lock()
 def calculate_row_1(target, x):
     def calculate_nextpart(results, x, cur):
         return results[-1] * x * math.log(3) / cur
-
-    def control_value(x):
-        return 3**x
 
     i = 0
 
@@ -34,17 +32,13 @@ def calculate_row_1(target, x):
         i += 1
 
     with lock_obj:
-        if control_value(x) == round(sum(local_result), 5):
-            target["sum_row_1"] = sum(local_result)
+        target["sum_row_1"] = sum(local_result)
 
 
 # 2 Вариант
 def calculate_row_2(target, x):
     def calculate_nextpart(results, x):
         return results[-1] * x
-
-    def control_value(x):
-        return round(1 / (1 - x), 4)
 
     i = 0
     local_result = [1]
@@ -53,8 +47,25 @@ def calculate_row_2(target, x):
         i += 1
 
     with lock_obj:
-        if control_value(x) == round(sum(local_result), 4):
-            target["sum_row_2"] = sum(local_result)
+        target["sum_row_2"] = sum(local_result)
+
+
+def check_results(target, x1, x2):
+    with lock_obj:
+
+        def control_value_1(x):
+            return 3**x
+
+        def control_value_2(x):
+            return round(1 / (1 - x), 4)
+
+        print(
+            f'Различие найденной суммы с контрольным значением {control_value_1(x1) - target.get("sum_row_1")}'
+        )
+        print(
+            f'Различие найденной суммы с контрольным значением {control_value_2(x2) - target.get("sum_row_2")}'
+        )
+        print(f"Результат {target}")
 
 
 def main():
@@ -62,14 +73,11 @@ def main():
 
     th1 = Thread(target=calculate_row_1, args=(part_of_rows, 1))
     th2 = Thread(target=calculate_row_2, args=(part_of_rows, 0.7))
+    th3 = Thread(target=check_results, args=(part_of_rows, 1, 0.7))
 
     th1.start()
     th2.start()
-
-    th1.join()
-    th2.join()
-
-    print(f"Результат {part_of_rows}")
+    th3.start()
 
 
 if __name__ == "__main__":
