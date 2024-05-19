@@ -15,7 +15,7 @@ import math
 from threading import Lock, Thread
 
 E = 10e-7
-lock_th = Lock()
+lock_obj = Lock()
 
 
 # 1 Вариант
@@ -33,7 +33,7 @@ def calculate_row_1(target, x):
         local_result.append(calculate_nextpart(local_result, x, i + 1))
         i += 1
 
-    with lock_th:
+    with lock_obj:
         if control_value(x) == round(sum(local_result), 5):
             target["sum_row_1"] = sum(local_result)
 
@@ -52,13 +52,13 @@ def calculate_row_2(target, x):
         local_result.append(calculate_nextpart(local_result, x))
         i += 1
 
-    with lock_th:
+    with lock_obj:
         if control_value(x) == round(sum(local_result), 4):
             target["sum_row_2"] = sum(local_result)
 
 
 def main():
-    part_of_rows = {"sum_row_1": [1], "sum_row_2": [1]}
+    part_of_rows = {"sum_row_1": 0, "sum_row_2": 0}
 
     th1 = Thread(target=calculate_row_1, args=(part_of_rows, 1))
     th2 = Thread(target=calculate_row_2, args=(part_of_rows, 0.7))
